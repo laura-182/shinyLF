@@ -6,4 +6,4 @@ Future plans
 - add more functions/variables to clean up code and eliminate duplication
 - make it possible to pass a dataframe of county FIPS codes and corresponding names to set the geos
 
-####### Data from the BLS Local Area Unemployment Survey.
+###### Data from the BLS Local Area Unemployment Survey.
