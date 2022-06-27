@@ -38,6 +38,9 @@ Unemp_ICRIowa <- ICRIowaData %>%
   filter(grepl("4$", series_id)) %>%
   select(-footnote_codes, -period, -year)
 
+mostRecent <- last(ICRIowaData$date, n=1, keep = FALSE)
+leastRecent <- first(ICRIowaData$date, n=1, keep = FALSE)
+
 
 ICRIowaXTS <- xts(ICRIowaData,
                   order.by = as.Date(ICRIowaData$date))
