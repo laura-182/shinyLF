@@ -1,7 +1,9 @@
 library(tidyverse)
 library(blscrapeR)
 library(xts)
-
+library(rvest)
+library(tigris)
+options(tigris_use_cache = TRUE)
 
 
 AllIowaURL <- "https://download.bls.gov/pub/time.series/la/la.data.22.Iowa"
@@ -19,6 +21,8 @@ ICRIowaData <- read_table(AllIowaURL) %>%
     grepl("19113", series_id) ~ "Linn",
     grepl("19183", series_id) ~ "Washington"
   )) %>% 
+  mutate(FIPS = str_sub(series_id, start = 6, end = 10)
+  ) %>% 
   mutate(metric_name = case_when(
     grepl("6$", series_id) ~ "Labor Force",
     grepl("5$", series_id) ~ "Employment",
@@ -44,3 +48,34 @@ leastRecent <- first(ICRIowaData$date, n=1, keep = FALSE)
 
 ICRIowaXTS <- xts(ICRIowaData,
                   order.by = as.Date(ICRIowaData$date))
+
+# https://community.rstudio.com/t/r-shiny-make-a-reactive-map-of-state-by-county/63224
+IAcounties <- tigris::counties(state = "IA", 
+                               keep_zipped_shapefile = TRUE,
+                               refresh = FALSE)
+ICRcounties <- IAcounties %>% 
+  filter(NAME %in% c("Benton", "Linn", "Jones", "Washington", "Johnson", "Iowa", "Cedar"))
+
+
+LAUSSchedule <- read_html("https://www.bls.gov/lau/")
+# reprogram with table from https://www.bls.gov/schedule/news_release/metro.htm
+longerLAUSSchedule <- read_html("https://www.bls.gov/schedule/news_release/metro.htm")
+
+nextReleaseSchedule <- LAUSSchedule %>% 
+  html_element(css = "#bodytext > div.highlight-box-green > ul") %>% 
+  html_text() %>% 
+  str_replace_all("[\n]|[\r]", " ")
+
+fullReleaseSchedule <- longerLAUSSchedule %>% 
+  html_element(css = "#bodytext > table") %>% 
+  html_table() %>%
+  mutate(
+    `Reference Month` = lubridate::my(`Reference Month`),
+    `Release Date` = lubridate::mdy(`Release Date`)
+    ) %>% 
+  filter(`Release Date` >= lubridate::today() - 30 & `Release Date` < lubridate::today() + 60) %>% 
+  mutate(
+    `Reference Month` = strftime(`Reference Month`, format = "%b %Y"),
+    `Release Date` = strftime(`Release Date`, format = "%m/%d/%Y")
+  )
+
